@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kataras/iris"
@@ -16,6 +17,7 @@ import (
 )
 
 var userList []string
+var mu sync.Mutex
 
 type lotteryController struct {
 	Ctx iris.Context
@@ -24,6 +26,7 @@ type lotteryController struct {
 func newApp() *iris.Application {
 	app := iris.New()
 	mvc.New(app.Party("/")).Handle(&lotteryController{})
+
 	return app
 }
 func (c *lotteryController) Get() string {
@@ -33,6 +36,8 @@ func (c *lotteryController) Get() string {
 func (c *lotteryController) PostImport() string {
 	strUsers := c.Ctx.FormValue("users")
 	users := strings.Split(strUsers, ",")
+	mu.Lock()
+	defer mu.Unlock()
 	count1 := len(users)
 	for _, u := range users {
 		u = strings.TrimSpace(u)
@@ -44,6 +49,9 @@ func (c *lotteryController) PostImport() string {
 	return fmt.Sprintf("total: %d, success: %d\n", count1, count2)
 }
 func (c *lotteryController) GetLucky() string {
+	mu.Lock()
+	defer mu.Unlock()
+
 	count := len(userList)
 	if count > 1 {
 		seed := time.Now().UnixNano()
@@ -62,5 +70,6 @@ func (c *lotteryController) GetLucky() string {
 func main() {
 	app := newApp()
 	userList = []string{}
+	mu = sync.Mutex{}
 	app.Run(iris.Addr(":8080"))
 }

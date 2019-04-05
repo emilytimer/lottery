@@ -23,5 +23,5 @@ func TestMVC(t *testing.T) {
 	e.GET("/").Expect().Status(httptest.StatusOK).Body().Equal("total: 100\n")
 	e.GET("/lucky").Expect().Status(httptest.StatusOK)
 
-	e.GET("/").Expect().Status(httptest.StatusOK).Body().Equal("total: 100\n")
+	e.GET("/").Expect().Status(httptest.StatusOK).Body().Equal("total: 99\n")
 }
