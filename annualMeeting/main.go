@@ -3,6 +3,7 @@ package main
 /*
 curl http://localhost:8080
 curl http://localhost:8080/lucky
+curl --data "users=a,b,c" http://localhost:8080/import
 */
 import (
 	"fmt"
@@ -52,6 +53,7 @@ func (c *lotteryController) GetLucky() string {
 		return fmt.Sprintf("lucky user:%s, still have: %d\n", user, count-1)
 	} else if count == 1 {
 		user := userList[0]
+		userList = userList[:0]
 		return fmt.Sprintf("lucky user:%s, still have: %d\n", user, count-1)
 	} else {
 		return fmt.Sprintf("total user is 0\n")
