@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/kataras/iris"
@@ -18,6 +19,8 @@ const (
 	giftTypeRealSmall
 	giftTypeRealLarge
 )
+
+var mu sync.Mutex
 
 type gift struct {
 	id       int
@@ -58,11 +61,11 @@ func initGift() {
 		link:     "",
 		gtype:    giftTypeRealLarge,
 		data:     "",
-		datalist: nil,  //奖品数据集合
-		total:    1000, // 0 不限量； 1只有1个
-		left:     1000,
+		datalist: nil,   //奖品数据集合
+		total:    10000, // 0 不限量； 1只有1个
+		left:     10000,
 		inuse:    true,
-		rate:     1000, //中奖概率万分之n
+		rate:     10000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -76,7 +79,7 @@ func initGift() {
 		datalist: nil, //奖品数据集合
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
-		inuse:    true,
+		inuse:    false,
 		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
@@ -91,7 +94,7 @@ func initGift() {
 		datalist: nil, //奖品数据集合
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
-		inuse:    true,
+		inuse:    false,
 		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
@@ -106,7 +109,7 @@ func initGift() {
 		datalist: []string{"c1", "c2", "c3", "c4", "c5"}, //奖品数据集合
 		total:    5,                                      // 0 不限量； 1只有1个
 		left:     5,
-		inuse:    true,
+		inuse:    false,
 		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
@@ -121,7 +124,7 @@ func initGift() {
 		datalist: nil, //奖品数据集合
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
-		inuse:    true,
+		inuse:    false,
 		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
@@ -160,9 +163,18 @@ func main() {
 	app.Run(iris.Addr(":8080"))
 }
 func (c *lotteryController) Get() string {
-	return fmt.Sprintf("current total gift:%v\n", len(giftList))
+	count := 0
+	for _, gift := range giftList {
+		if !gift.inuse {
+			continue
+		}
+		count += gift.total
+	}
+	return fmt.Sprintf("current total gift:%v\n", count)
 }
 func (c *lotteryController) GetLucky() map[string]interface{} {
+	mu.Lock()
+	defer mu.Unlock()
 	code := luckyCode()
 	ok := false
 	result := make(map[string]interface{})
