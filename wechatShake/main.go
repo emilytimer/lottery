@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/mvc"
@@ -60,7 +62,7 @@ func initGift() {
 		total:    1000, // 0 不限量； 1只有1个
 		left:     1000,
 		inuse:    true,
-		rate:     10000, //中奖概率万分之n
+		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -75,7 +77,7 @@ func initGift() {
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
 		inuse:    true,
-		rate:     100, //中奖概率万分之n
+		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -90,7 +92,7 @@ func initGift() {
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
 		inuse:    true,
-		rate:     5000, //中奖概率万分之n
+		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -105,7 +107,7 @@ func initGift() {
 		total:    5,                                      // 0 不限量； 1只有1个
 		left:     5,
 		inuse:    true,
-		rate:     5000, //中奖概率万分之n
+		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -120,7 +122,7 @@ func initGift() {
 		total:    5,   // 0 不限量； 1只有1个
 		left:     5,
 		inuse:    true,
-		rate:     5000, //中奖概率万分之n
+		rate:     1000, //中奖概率万分之n
 		rateMin:  0,
 		rateMax:  0,
 	}
@@ -129,6 +131,20 @@ func initGift() {
 	giftList[2] = &g3
 	giftList[3] = &g4
 	giftList[4] = &g5
+	rateStart := 0
+	for _, data := range giftList {
+		if !data.inuse {
+			continue
+		}
+		data.rateMin = rateStart
+		data.rateMax = rateStart + data.rate
+		if data.rateMax > rateMax {
+			data.rateMax = rateMax
+			rateStart = 0 // ? 该有重复了啊
+		} else {
+			rateStart = rateStart + data.rate
+		}
+	}
 
 }
 
@@ -145,4 +161,109 @@ func main() {
 }
 func (c *lotteryController) Get() string {
 	return fmt.Sprintf("current total gift:%v\n", len(giftList))
+}
+func (c *lotteryController) GetLucky() map[string]interface{} {
+	code := luckyCode()
+	ok := false
+	result := make(map[string]interface{})
+
+	for _, data := range giftList {
+		if !data.inuse || (data.total > 0 && data.left <= 0) {
+			continue
+		}
+
+		if data.rateMin <= int(code) && data.rateMax > int(code) {
+			sendData := ""
+
+			switch data.gtype {
+			case giftTypeCoin:
+				ok, sendData = sendCoin(data)
+			case giftTypeCoupon:
+				ok, sendData = sendCoupon(data)
+
+			case giftTypeCouponFix:
+				ok, sendData = sendCouponFix(data)
+
+			case giftTypeRealLarge:
+				ok, sendData = sendRealLarge(data)
+
+			case giftTypeRealSmall:
+				ok, sendData = sendRealSmall(data)
+			}
+			if ok {
+				saveLucky(code, data.id, data.name, data.link, sendData, data.left)
+				result["success"] = ok
+				result["id"] = data.id
+				result["name"] = data.name
+				result["data"] = sendData
+			}
+		}
+	}
+	return result
+}
+func saveLucky(code int32, id int, name, link, SendData string, left int) {
+	logger.Printf("lucky, code=%d,gift=%d,name=%s,link=%s,data=%s,left=%d", code, id, name, link, SendData, left)
+}
+func sendCoin(data *gift) (bool, string) {
+	fmt.Println("data.total:", data.total)
+	if data.total == 0 {
+		return true, data.data
+	} else if data.left > 0 {
+		data.left = data.left - 1
+		return true, data.data
+	} else {
+		return false, "奖品已发完"
+	}
+}
+
+// 不同面额得优惠券
+func sendCoupon(data *gift) (bool, string) {
+	if data.left > 0 {
+		left := data.left - 1
+		data.left = left
+		return true, data.datalist[left]
+	} else {
+		return false, "奖品已发完"
+	}
+}
+
+// 一样的优惠券
+func sendCouponFix(data *gift) (bool, string) {
+	if data.total == 0 {
+		return true, data.data
+	} else if data.left > 0 {
+		data.left = data.left - 1
+		return true, data.data
+	} else {
+		return false, "奖品已发完"
+	}
+}
+
+// 小的实物奖
+func sendRealSmall(data *gift) (bool, string) {
+	if data.total == 0 {
+		return true, data.data
+	} else if data.left > 0 {
+		data.left = data.left - 1
+		return true, data.data
+	} else {
+		return false, "奖品已发完"
+	}
+}
+
+// 大得实物奖
+func sendRealLarge(data *gift) (bool, string) {
+	if data.total == 0 {
+		return true, data.data
+	} else if data.left > 0 {
+		data.left = data.left - 1
+		return true, data.data
+	} else {
+		return false, "奖品已发完"
+	}
+}
+func luckyCode() int32 {
+	seed := time.Now().UnixNano()
+	r := rand.New(rand.NewSource(seed)).Int31n(int32(rateMax))
+	return r
 }
