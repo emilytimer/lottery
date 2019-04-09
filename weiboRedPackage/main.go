@@ -43,11 +43,11 @@ func (c *lotteryController) GetSet() string {
 	money, moneyErr := c.Ctx.URLParamInt("money")
 	number, numberErr := c.Ctx.URLParamInt("number")
 	if uidErr != nil || moneyErr != nil || numberErr != nil {
-		return fmt.Sprintf("参数格式异常,uidErr=%d,moneyErr=%d,numberErr=%d", uid, money, number)
+		return fmt.Sprintf("get error: uidErr=%s,moneyErr=%s,numberErr=%s\n", uidErr, moneyErr, numberErr)
 	}
 	money = int(money * 100)
 	if uid < 1 || money < 1 || number < 1 {
-		return fmt.Sprintf("参数格式异常,uidErr=%d,moneyErr=%d,numberErr=%d", uid, money, number)
+		return fmt.Sprintf("n<1 err: uidErr=%d,moneyErr=%d,numberErr=%d\n", uid, money, number)
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	rMax := 0.55
@@ -76,14 +76,13 @@ func (c *lotteryController) GetSet() string {
 	}
 	redId := r.Uint32()
 	packageList[redId] = list
-	return fmt.Sprintf("/get?id=%v&money=%v&number=%v", uid, money, number)
+	return fmt.Sprintf("/get?id=%v&money=%v&number=%v\n", redId, money, number)
 }
 
 // http://localhost:8080/set?uid=1&id=
 func (c *lotteryController) GetGet() string {
 	uid, uidErr := c.Ctx.URLParamInt("uid")
-	id, idErr := c.Ctx.URLParamInt("money")
-	number, numberErr := c.Ctx.URLParamInt("number")
+	id, idErr := c.Ctx.URLParamInt("id")
 	if uidErr != nil || idErr != nil {
 		return fmt.Sprintf("参数格式异常,uidErr=%d,idErr=%d", uid, id)
 	}
