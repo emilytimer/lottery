@@ -78,3 +78,35 @@ func (c *lotteryController) GetSet() string {
 	packageList[redId] = list
 	return fmt.Sprintf("/get?id=%v&money=%v&number=%v", uid, money, number)
 }
+
+// http://localhost:8080/set?uid=1&id=
+func (c *lotteryController) GetGet() string {
+	uid, uidErr := c.Ctx.URLParamInt("uid")
+	id, idErr := c.Ctx.URLParamInt("money")
+	number, numberErr := c.Ctx.URLParamInt("number")
+	if uidErr != nil || idErr != nil {
+		return fmt.Sprintf("参数格式异常,uidErr=%d,idErr=%d", uid, id)
+	}
+	if uid < 1 || id < 1 {
+		return fmt.Sprintf("")
+	}
+	list, ok := packageList[uint32(id)]
+	if !ok || len(list) < 1 {
+		return fmt.Sprintf("红包不存在，id=%d\n", id)
+	}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	i := r.Intn(len(list))
+	money := list[i]
+	if len(list) > 1 {
+		if i == len(list)-1 {
+			packageList[uint32(id)] = list[:i]
+		} else if i == 0 {
+			packageList[uint32(id)] = list[1:]
+		} else {
+			packageList[uint32(id)] = append(list[:i], list[i+1:]...)
+		}
+	} else {
+		delete(packageList, uint32(id))
+	}
+	return fmt.Sprintf("恭喜抢到红包 %d 元\n", money)
+}
